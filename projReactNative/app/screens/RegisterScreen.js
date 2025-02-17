@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { registerUser, sendOTP } from "../services/authService";
+import { register, sendOTP } from "../services/authService";
 export default function RegisterScreen() {
   const navigation = useNavigation();
   const [fullName, setFullName] = useState("");
@@ -33,34 +33,23 @@ export default function RegisterScreen() {
     }
 
     try {
-      const userData = {
+      // Gửi OTP trước khi đăng ký
+      console.log("Email gửi OTP:", email);
+      await sendOTP(email);
+      console.log("OTP đã gửi tới:", email);
+
+      // Chuyển sang màn hình nhập OTP và truyền dữ liệu đăng ký
+      navigation.navigate("OtpVerify", {
         fullName,
         email,
         phone,
         address,
         password,
         confirmPassword,
-      };
-
-      console.log("Dữ liệu gửi đăng ký:", userData);
-      const response = await registerUser(userData);
-      console.log("Phản hồi từ server:", response.data);
-
-      await sendOTP(email);
-      navigation.navigate("otpVerify", { email });
+      });
     } catch (error) {
-      console.error("Lỗi đăng ký:", error);
-
-      if (error.response) {
-        console.log("Lỗi từ server:", error.response.data);
-        Alert.alert("Lỗi", error.response.data?.message || "Đăng ký thất bại");
-      } else if (error.request) {
-        console.log("Không có phản hồi từ server:", error.request);
-        Alert.alert("Lỗi", "Không thể kết nối đến server");
-      } else {
-        console.log("Lỗi không xác định:", error.message);
-        Alert.alert("Lỗi", `Đăng ký thất bại: ${error.message}`);
-      }
+      console.error("Lỗi gửi OTP:", error);
+      Alert.alert("Lỗi", "Không thể gửi OTP. Vui lòng thử lại.");
     }
   };
 

@@ -7,6 +7,8 @@ import RegisterScreen from "./app/screens/RegisterScreen";
 import ForgotPasswordScreen from "./app/screens/ForgotPassWord";
 import OTPVerificationScreen from "./app/screens/OTPVerify";
 import NewPasswordScreen from "./app/screens/NewPassWord";
+//import EditProfileScreen from "./app/screens/UpdateProfile";
+import MainHome from "./app/screens/MainHome";
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -24,7 +26,9 @@ export default function App() {
         <Stack.Screen name="forgotPassWord" component={ForgotPasswordScreen} />
         <Stack.Screen name="newPassWord" component={NewPasswordScreen} />
         <Stack.Screen name="otpVerify" component={OTPVerificationScreen} />
+        <Stack.Screen name="mainHome" component={MainHome} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+//<Stack.Screen name="profile" component={EditProfileScreen} />

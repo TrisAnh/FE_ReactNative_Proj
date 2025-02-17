@@ -5,11 +5,11 @@ const getToken = () => {
   if (typeof window !== "undefined" && window.localStorage) {
     return localStorage.getItem("token");
   }
-  return null; // Trả về null nếu không có `localStorage`
+  return null; 
 };
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "http://10.0.2.2:5000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -17,7 +17,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = getToken(); // Lấy token an toàn
+    const token = getToken(); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

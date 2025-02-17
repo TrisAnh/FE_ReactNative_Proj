@@ -8,26 +8,63 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { verifyOTP } from "../services/authService";
+import { verifyOTP, resendOTP, register } from "../services/authService";
+
 export default function OTPVerificationScreen() {
   const [otp, setOtp] = useState("");
+  const [isResending, setIsResending] = useState(false); // Biến để kiểm tra trạng thái gửi lại OTP
   const navigation = useNavigation();
   const route = useRoute();
-  const { email } = route.params;
-
+  const { fullName, email, phone, address, password, confirmPassword } =
+    route.params;
   const handleVerifyOTP = async () => {
     try {
       const response = await verifyOTP(email, otp);
-      if (response.success) {
-        navigation.navigate("Login", { email });
+      if (response.data.success) {
+        console.log("OTP xác nhận thành công");
+
+        // Gửi dữ liệu đăng ký sau khi xác nhận OTP
+        const userData = {
+          fullName,
+          email,
+          phone,
+          address,
+          password,
+          confirmPassword,
+        };
+        await register(userData);
+
+        Alert.alert("Thành công", "Đăng ký thành công!");
+        navigation.navigate("Login");
       } else {
-        Alert.alert("Lỗi", response.message || "Xác thực OTP thất bại");
+        Alert.alert("Lỗi", "Mã OTP không hợp lệ");
       }
     } catch (error) {
-      Alert.alert("Lỗi", error.response?.data?.message || "Đã xảy ra lỗi");
+      console.error("Lỗi xác nhận OTP:", error);
+      Alert.alert("Lỗi", "Không thể xác nhận OTP. Vui lòng thử lại.");
+    }
+  };
+  const handleResendOTP = async () => {
+    setIsResending(true); // Bật chế độ gửi lại OTP
+    try {
+      const response = await resendOTP(email); // Gọi API để gửi lại OTP
+      if (response.success) {
+        Alert.alert("Thành công", "Mã OTP đã được gửi lại đến email của bạn.");
+      } else {
+        Alert.alert("Lỗi", response.message || "Gửi lại OTP thất bại.");
+      }
+    } catch (error) {
+      console.log("Lỗi gửi lại OTP:", error); // Kiểm tra lỗi
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Đã xảy ra lỗi khi gửi lại OTP."
+      );
+    } finally {
+      setIsResending(false); // Tắt chế độ gửi lại OTP
     }
   };
 
@@ -59,6 +96,17 @@ export default function OTPVerificationScreen() {
         </View>
         <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
           <Text style={styles.verifyButtonText}>Xác thực</Text>
+        </TouchableOpacity>
+
+        {/* Nút gửi lại OTP */}
+        <TouchableOpacity
+          style={styles.resendButton}
+          onPress={handleResendOTP}
+          disabled={isResending} // Vô hiệu hóa nút khi đang gửi lại OTP
+        >
+          <Text style={styles.resendButtonText}>
+            {isResending ? "Đang gửi lại..." : "Gửi lại mã OTP"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -130,6 +178,19 @@ const styles = StyleSheet.create({
   verifyButtonText: {
     color: "#fff",
     fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  resendButton: {
+    marginTop: 15,
+    backgroundColor: "#f1f1f1",
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+  resendButtonText: {
+    color: "#61dafb",
+    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
   },

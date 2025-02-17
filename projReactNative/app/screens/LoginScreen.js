@@ -34,7 +34,7 @@ export default function LoginScreen() {
 
       if (response && response.token) {
         Alert.alert("Thành công", "Đăng nhập thành công!");
-        navigation.navigate("Home");
+        navigation.navigate("mainHome");
       } else {
         console.log("Login failed, unexpected response:", response);
         Alert.alert("Lỗi", "Đăng nhập thất bại: Phản hồi không hợp lệ");
