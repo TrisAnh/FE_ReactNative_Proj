@@ -14,12 +14,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import axiosClient from "../api/AxiosClient";
 import { login } from "../services/authService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 export default function LoginScreen() {
   const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ email và mật khẩu!");
@@ -28,19 +31,32 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      console.log("Attempting login with:", { email, password });
+      console.log("Đang thử đăng nhập với:", { email, password });
       const response = await login({ email, password });
-      console.log("Login response:", response);
+      console.log("Phản hồi đăng nhập:", response);
 
-      if (response && response.token) {
-        Alert.alert("Thành công", "Đăng nhập thành công!");
+      if (response && response.message === "Đăng nhập thành công!") {
+        // Đăng nhập thành công
+        console.log("Đăng nhập thành công");
+        Alert.alert("Thành công", response.message);
+
+        // Lưu token vào AsyncStorage
+        await AsyncStorage.setItem("token", response.token); // Lưu token vào AsyncStorage
+        console.log("Đã lưu token", response.token);
+        // TODO: Lấy thông tin profile sử dụng token đã lưu
+        // Ví dụ:
+        // const profile = await fetchProfile(response.token); // Ví dụ hàm lấy profile
+        // navigation.navigate("profile", { profile });
+
         navigation.navigate("mainHome");
       } else {
-        console.log("Login failed, unexpected response:", response);
+        // Xử lý trường hợp phản hồi không mong đợi
+        console.log("Đăng nhập thất bại, phản hồi không mong đợi:", response);
         Alert.alert("Lỗi", "Đăng nhập thất bại: Phản hồi không hợp lệ");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      // Xử lý lỗi từ API
+      console.error("Lỗi đăng nhập:", error);
       Alert.alert("Lỗi", error.message || "Đăng nhập thất bại!");
     } finally {
       setLoading(false);

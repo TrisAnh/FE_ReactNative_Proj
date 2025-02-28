@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import {
   View,
@@ -7,30 +5,75 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { resetPassword } from "../services/authService";
 
 export default function NewPasswordScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
   const route = useRoute();
   const { email } = route.params;
 
-  const handleResetPassword = () => {
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Lỗi", "Mật khẩu không khớp");
-      return;
+  const handleResetPassword = async () => {
+    try {
+      console.log("Starting password reset...");
+      console.log("Email:", email);
+      console.log("New password:", newPassword);
+      console.log("Confirm password:", confirmPassword);
+
+      if (!email) {
+        console.log("Error: Invalid email");
+        Alert.alert("Error", "No valid email found, please try again.");
+        return;
+      }
+
+      if (!newPassword || !confirmPassword) {
+        console.log("Error: Missing password information");
+        Alert.alert("Error", "Please enter all required information");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        console.log("Error: Password confirmation doesn't match");
+        Alert.alert("Error", "Password confirmation doesn't match");
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        console.log("Error: Password too short");
+        Alert.alert("Error", "Password must be at least 8 characters long");
+        return;
+      }
+
+      setIsLoading(true);
+      console.log("Sending password reset request...");
+
+      console.log("Data being sent:", JSON.stringify({ email, newPassword }));
+
+      const response = await resetPassword(email, newPassword);
+
+      console.log("Password reset successful");
+      Alert.alert(
+        "Success",
+        response.message || "Password reset successfully",
+        [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+      );
+    } catch (error) {
+      console.log("Error from server:", error);
+      Alert.alert(
+        "Error",
+        typeof error === "string" ? error : "Unable to reset password"
+      );
+    } finally {
+      setIsLoading(false);
+      console.log("Password reset process completed");
     }
-    // Implement your password reset logic here
-    // For now, we'll just show an alert and navigate back to login
-    Alert.alert("Thành công", "Mật khẩu đã được đặt lại", [
-      { text: "OK", onPress: () => navigation.navigate("Login") },
-    ]);
   };
 
   return (
@@ -42,10 +85,11 @@ export default function NewPasswordScreen() {
         <Ionicons name="arrow-back" size={24} color="#61dafb" />
       </TouchableOpacity>
       <View style={styles.content}>
-        <Text style={styles.title}>Đặt lại mật khẩu</Text>
+        <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>
-          Nhập mật khẩu mới cho tài khoản {email}
+          Enter a new password for account {email}
         </Text>
+
         <View style={styles.inputWrapper}>
           <Ionicons
             name="lock-closed-outline"
@@ -57,20 +101,11 @@ export default function NewPasswordScreen() {
             style={styles.input}
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="Mật khẩu mới"
-            secureTextEntry={!showPassword}
+            placeholder="New password"
+            secureTextEntry
           />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={24}
-              color="#666"
-            />
-          </TouchableOpacity>
         </View>
+
         <View style={styles.inputWrapper}>
           <Ionicons
             name="lock-closed-outline"
@@ -82,21 +117,24 @@ export default function NewPasswordScreen() {
             style={styles.input}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Xác nhận mật khẩu mới"
-            secureTextEntry={!showPassword}
+            placeholder="Confirm new password"
+            secureTextEntry
           />
         </View>
+
         <TouchableOpacity
-          style={styles.resetButton}
+          style={[styles.resetButton, isLoading && styles.resetButtonDisabled]}
           onPress={handleResetPassword}
+          disabled={isLoading}
         >
-          <Text style={styles.resetButtonText}>Đặt lại mật khẩu</Text>
+          <Text style={styles.resetButtonText}>
+            {isLoading ? "Processing..." : "Reset Password"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -148,9 +186,6 @@ const styles = StyleSheet.create({
     height: 50,
     fontSize: 16,
   },
-  eyeIcon: {
-    padding: 10,
-  },
   resetButton: {
     backgroundColor: "#61dafb",
     paddingVertical: 15,
@@ -161,6 +196,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    width: "100%",
+  },
+  resetButtonDisabled: {
+    backgroundColor: "#a8e7fc",
   },
   resetButtonText: {
     color: "#fff",

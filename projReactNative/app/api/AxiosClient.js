@@ -1,13 +1,17 @@
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Kiểm tra xem môi trường có `localStorage` không
-const getToken = () => {
-  if (typeof window !== "undefined" && window.localStorage) {
-    return localStorage.getItem("token");
+// Lấy token từ AsyncStorage (hàm bất đồng bộ)
+const getToken = async () => {
+  try {
+    return await AsyncStorage.getItem("token");
+  } catch (error) {
+    console.error("Lỗi khi lấy token:", error);
+    return null;
   }
-  return null; 
 };
 
+// Tạo instance axios với baseURL
 const axiosInstance = axios.create({
   baseURL: "http://10.0.2.2:5000/api",
   headers: {
@@ -15,9 +19,10 @@ const axiosInstance = axios.create({
   },
 });
 
+// Thêm token vào request trước khi gửi
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = getToken(); 
+  async (config) => {
+    const token = await getToken(); // Đợi lấy token
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

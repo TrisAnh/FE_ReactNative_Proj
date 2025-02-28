@@ -1,3 +1,5 @@
+// screens/RoomCategoryList.js
+import React from "react";
 import {
   View,
   Text,
@@ -5,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 const categories = [
   { id: "1", name: "Phòng đơn" },
@@ -14,10 +17,33 @@ const categories = [
   { id: "5", name: "Phòng ghép" },
 ];
 
-const RoomCategoryList = () => {
+const RoomCategoryList = ({ selectedCategory, onSelectCategory }) => {
+  const navigation = useNavigation();
+
+  // Trong hàm handleCategoryPress của RoomCategoryList.js
+  const handleCategoryPress = (category) => {
+    navigation.navigate("CategoryRooms", {
+      categoryId: category.id,
+      categoryName: category.name,
+    });
+  };
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.categoryItem}>
-      <Text style={styles.categoryText}>{item.name}</Text>
+    <TouchableOpacity
+      style={[
+        styles.categoryItem,
+        selectedCategory?.id === item.id && styles.selectedCategory,
+      ]}
+      onPress={() => handleCategoryPress(item)}
+    >
+      <Text
+        style={[
+          styles.categoryText,
+          selectedCategory?.id === item.id && styles.selectedCategoryText,
+        ]}
+      >
+        {item.name}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -30,6 +56,7 @@ const RoomCategoryList = () => {
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
       />
     </View>
   );
@@ -45,16 +72,30 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 10,
   },
+  listContainer: {
+    paddingHorizontal: 10,
+  },
   categoryItem: {
-    marginHorizontal: 8,
+    marginRight: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "#f0f0f0",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  selectedCategory: {
+    backgroundColor: "#4A90E2",
+    borderColor: "#4A90E2",
   },
   categoryText: {
     fontSize: 14,
     fontWeight: "500",
+    color: "#333",
+  },
+  selectedCategoryText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });
 

@@ -1,55 +1,51 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { sendOTPForgot } from "../services/authService";
-import { sendOTP } from "../services/authService";
-export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState("");
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { verifyOTP, resendOTP, register } from "../services/authService";
+
+export default function OTPVerificationForgotScreen() {
+  const [otp, setOtp] = useState("");
+  const [isResending, setIsResending] = useState(false);
   const navigation = useNavigation();
-  const handleSendOTP = async () => {
-    if (!email) {
-      Alert.alert("Lỗi", "Vui lòng nhập email!");
+  const route = useRoute();
+  const { fullName, email, phone, address, password, confirmPassword } =
+    route.params;
+  const handleVerifyOTP = async () => {
+    if (!otp.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập mã OTP.");
       return;
     }
 
-    console.log("📩 Gửi OTP cho email:", email); // Kiểm tra email trước khi gửi
-
     try {
-      const response = await sendOTPForgot(email);
-      console.log("✅ Phản hồi API:", response); // Log phản hồi từ server
+      const response = await verifyOTP(email, otp);
+      if (response.success) {
+        console.log("OTP xác nhận thành công");
+        Alert.alert("Thành công", "Mã OTP hợp lệ. Vui lòng đặt lại mật khẩu!");
+        console.log("Điều hướng đến newPassWord...");
+        navigation.navigate("newPassWord", { email });
 
-      Alert.alert("Thành công", "OTP đã được gửi đến email của bạn!");
-      navigation.navigate("otpVerifyForgot", { email });
-    } catch (error) {
-      console.log("❌ Lỗi API:", error);
-
-      let errorMessage = "Không thể gửi OTP!";
-      if (error.response) {
-        console.log("🛠 Lỗi chi tiết từ server:", error.response.data);
-
-        if (error.response.status === 400) {
-          errorMessage = "Email không hợp lệ hoặc chưa đăng ký!";
-        } else if (error.response.status === 500) {
-          errorMessage = "Lỗi máy chủ! Vui lòng thử lại sau.";
-        } else {
-          errorMessage = error.response.data.message || errorMessage;
-        }
-      } else if (error.request) {
-        errorMessage = "Không thể kết nối đến server!";
+        navigation.navigate("newPassWord", { email });
       } else {
-        errorMessage = error.message;
+        Alert.alert("Lỗi", response.message || "Mã OTP không hợp lệ.");
       }
-
-      Alert.alert("Lỗi", errorMessage);
+    } catch (error) {
+      console.error("Lỗi xác nhận OTP:", error);
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message ||
+          "Không thể xác nhận OTP. Vui lòng thử lại."
+      );
     }
   };
 
@@ -62,26 +58,25 @@ export default function ForgotPasswordScreen() {
         <Ionicons name="arrow-back" size={24} color="#61dafb" />
       </TouchableOpacity>
       <View style={styles.content}>
-        <Text style={styles.title}>Quên mật khẩu</Text>
-        <Text style={styles.subtitle}>Nhập email của bạn để nhận mã OTP</Text>
+        <Text style={styles.title}>Xác thực OTP</Text>
+        <Text style={styles.subtitle}>Nhập mã OTP đã được gửi đến {email}</Text>
         <View style={styles.inputWrapper}>
           <Ionicons
-            name="mail-outline"
+            name="key-outline"
             size={24}
             color="#666"
             style={styles.inputIcon}
           />
           <TextInput
             style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Nhập email"
-            keyboardType="email-address"
-            autoCapitalize="none"
+            value={otp}
+            onChangeText={setOtp}
+            placeholder="Nhập mã OTP"
+            keyboardType="number-pad"
           />
         </View>
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendOTP}>
-          <Text style={styles.sendButtonText}>Gửi OTP</Text>
+        <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
+          <Text style={styles.verifyButtonText}>Xác thực</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -139,7 +134,7 @@ const styles = StyleSheet.create({
     height: 50,
     fontSize: 16,
   },
-  sendButton: {
+  verifyButton: {
     backgroundColor: "#61dafb",
     paddingVertical: 15,
     paddingHorizontal: 35,
@@ -150,9 +145,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
-  sendButtonText: {
+  verifyButtonText: {
     color: "#fff",
     fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  resendButton: {
+    marginTop: 15,
+    backgroundColor: "#f1f1f1",
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+  resendButtonText: {
+    color: "#61dafb",
+    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
   },

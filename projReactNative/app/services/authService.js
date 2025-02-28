@@ -1,15 +1,24 @@
 import axiosInstance from "../api/AxiosClient";
-
-// Đăng nhập
+import AsyncStorage from "@react-native-async-storage/async-storage";
 export const login = async (credentials) => {
   try {
     const response = await axiosInstance.post("/auth/login", credentials);
+
+    // Lưu token vào AsyncStorage khi đăng nhập thành công
+    await AsyncStorage.setItem("token", response.data.token);
+
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error.message;
+    console.error("Lỗi đăng nhập:", error);
+
+    // Trả về lỗi có thông báo rõ ràng
+    if (error.response) {
+      throw new Error(error.response.data.message || "Đăng nhập thất bại!");
+    } else {
+      throw new Error("Không thể kết nối đến server!");
+    }
   }
 };
-
 // Đăng ký
 export const register = async (userData) => {
   try {
@@ -49,7 +58,54 @@ export const verifyOTP = async (email, otp) => {
     throw error.response ? error.response.data : error.message;
   }
 };
+export const sendOTPForgot = async (email) => {
+  try {
+    const response = await axiosInstance.post("/auth/send-otpForgot", {
+      email,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : error.message;
+  }
+};
+export const verifyOTPForgot = async (email, otp) => {
+  try {
+    const response = await axiosInstance.post("/auth/verify-otpForgot", {
+      email,
+      otp,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : error.message;
+  }
+};
+export const resetPassword = async (email, newPassword) => {
+  try {
+    const response = await axiosInstance.post("/auth/reset-password", {
+      email,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : error.message;
+  }
+};
+export const getProfile = async (token) => {
+  try {
+    if (!token) throw new Error("Bạn chưa đăng nhập!");
 
+    const response = await axiosInstance.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Không thể tải thông tin người dùng"
+    );
+  }
+};
 // Cập nhật thông tin người dùng
 export const updateProfile = async (profileData) => {
   try {
@@ -77,57 +133,18 @@ export const updateAvatar = async (avatarFile) => {
     throw error.response ? error.response.data : error.message;
   }
 };
-
-// Gửi OTP thay đổi email
-export const sendChangeEmailOTP = async (newEmail) => {
+export const getRoomsByCategory = async (categoryId, page = 1, limit = 10) => {
   try {
-    const response = await axiosInstance.post("/auth/sendChangeEmailOTP", {
-      newEmail,
-    });
-    return response.data;
+    const response = await fetch(
+      `${API_BASE_URL}/rooms?categoryId=${categoryId}&page=${page}&limit=${limit}`
+    );
+    const data = await response.json();
+    return data;
   } catch (error) {
-    throw error.response ? error.response.data : error.message;
+    console.error("Error fetching rooms by category:", error);
+    throw error;
   }
 };
-
-// Xác thực và thay đổi email
-export const verifyAndChangeEmail = async (otp, newEmail) => {
-  try {
-    const response = await axiosInstance.post("/auth/verifyAndChangeEmail", {
-      otp,
-      newEmail,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error.message;
-  }
-};
-
-// Gửi OTP thay đổi số điện thoại
-export const sendChangePhoneOTP = async (newPhone) => {
-  try {
-    const response = await axiosInstance.post("/auth/sendChangePhoneOTP", {
-      newPhone,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error.message;
-  }
-};
-
-// Xác thực và thay đổi số điện thoại
-export const verifyAndChangePhone = async (otp, newPhone) => {
-  try {
-    const response = await axiosInstance.post("/auth/verifyAndChangePhone", {
-      otp,
-      newPhone,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error.message;
-  }
-};
-
 export const getRoomCategories = async () => {
   try {
     const response = await axiosInstance.get("/auth/getAllRoomCategories");

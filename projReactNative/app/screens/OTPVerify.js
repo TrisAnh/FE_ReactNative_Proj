@@ -22,49 +22,54 @@ export default function OTPVerificationScreen() {
   const { fullName, email, phone, address, password, confirmPassword } =
     route.params;
   const handleVerifyOTP = async () => {
+    if (!otp.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập mã OTP.");
+      return;
+    }
+
     try {
       const response = await verifyOTP(email, otp);
-      if (response.data.success) {
+      if (response.success) {
         console.log("OTP xác nhận thành công");
-
-        // Gửi dữ liệu đăng ký sau khi xác nhận OTP
-        const userData = {
+        await register({
           fullName,
           email,
           phone,
           address,
           password,
           confirmPassword,
-        };
-        await register(userData);
+        });
 
-        Alert.alert("Thành công", "Đăng ký thành công!");
-        navigation.navigate("Login");
+        Alert.alert("Thành công", "Đăng ký thành công!", [
+          { text: "OK", onPress: () => navigation.navigate("Login") },
+        ]);
       } else {
-        Alert.alert("Lỗi", "Mã OTP không hợp lệ");
+        Alert.alert("Lỗi", response.message || "Mã OTP không hợp lệ.");
       }
     } catch (error) {
       console.error("Lỗi xác nhận OTP:", error);
-      Alert.alert("Lỗi", "Không thể xác nhận OTP. Vui lòng thử lại.");
-    }
-  };
-  const handleResendOTP = async () => {
-    setIsResending(true); // Bật chế độ gửi lại OTP
-    try {
-      const response = await resendOTP(email); // Gọi API để gửi lại OTP
-      if (response.success) {
-        Alert.alert("Thành công", "Mã OTP đã được gửi lại đến email của bạn.");
-      } else {
-        Alert.alert("Lỗi", response.message || "Gửi lại OTP thất bại.");
-      }
-    } catch (error) {
-      console.log("Lỗi gửi lại OTP:", error); // Kiểm tra lỗi
       Alert.alert(
         "Lỗi",
-        error.response?.data?.message || "Đã xảy ra lỗi khi gửi lại OTP."
+        error.response?.data?.message ||
+          "Không thể xác nhận OTP. Vui lòng thử lại."
+      );
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (isResending) return; // Ngăn gọi lại khi đang gửi
+
+    setIsResending(true);
+    try {
+      const response = await resendOTP(email);
+      Alert.alert("Thông báo", response.message || "Mã OTP đã được gửi lại.");
+    } catch (error) {
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Không thể gửi lại OTP."
       );
     } finally {
-      setIsResending(false); // Tắt chế độ gửi lại OTP
+      setTimeout(() => setIsResending(false), 30000); // Chặn spam trong 30 giây
     }
   };
 

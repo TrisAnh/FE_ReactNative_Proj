@@ -4,309 +4,340 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   Image,
+  TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  ActivityIndicator,
   Alert,
+  ScrollView,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import axios from "axios";
+import { launchImageLibrary } from "react-native-image-picker";
+import { getProfile, updateProfile } from "../services/authService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
-const API_URL = "http://localhost:5000/api";
-
-const EditProfileScreen = ({ route }) => {
+const UpdateProfile = () => {
+  const [user, setUser] = useState(null);
+  const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const navigation = useNavigation();
-  const [user, setUser] = useState(route.params.user);
-  const [fullName, setFullName] = useState(user.fullName);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone);
-  const [address, setAddress] = useState(user.address);
-  const [avatar, setAvatar] = useState(user.avatar);
-  const [newEmail, setNewEmail] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otpFor, setOtpFor] = useState("");
 
   useEffect(() => {
-    (async () => {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Xin lỗi",
-          "Chúng tôi cần quyền truy cập thư viện ảnh để thay đổi avatar."
-        );
-      }
-    })();
+    fetchProfile();
   }, []);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+  const fetchProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      console.log("Token:", token);
 
-    if (!result.cancelled) {
-      updateAvatar(result.uri);
+      if (!token) {
+        Alert.alert("Lỗi", "Bạn chưa đăng nhập!");
+        navigation.goBack();
+        return;
+      }
+
+      const data = await getProfile(token);
+      setUser(data);
+      // Initialize email and phone with user data if available
+      setEmail(data.email || "");
+      setPhone(data.phone || "");
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể tải thông tin người dùng!");
+      navigation.goBack();
     }
   };
 
-  const updateAvatar = async (imageUri) => {
+  const handleChoosePhoto = () => {
+    launchImageLibrary({ mediaType: "photo" }, (response) => {
+      if (response.didCancel) {
+        console.log("User cancelled image picker");
+      } else if (response.error) {
+        console.log("ImagePicker Error: ", response.error);
+      } else if (response.assets && response.assets.length > 0) {
+        setImage(response.assets[0]);
+      }
+    });
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!image) {
+      Alert.alert("Lỗi", "Vui lòng chọn một ảnh!");
+      return;
+    }
+
+    setLoading(true);
+
     const formData = new FormData();
     formData.append("avatar", {
-      uri: imageUri,
-      type: "image/jpeg",
-      name: "avatar.jpg",
+      uri: image.uri,
+      type: image.type,
+      name: image.fileName,
     });
 
     try {
-      const response = await axios.put(
-        `${API_URL}/auth/updateavatar`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-      setAvatar(response.data.user.avatar);
-      Alert.alert("Thành công", "Cập nhật avatar thành công!");
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể cập nhật avatar. Vui lòng thử lại sau.");
-    }
-  };
+      const token = await AsyncStorage.getItem("token");
 
-  const updateProfile = async () => {
-    try {
-      const response = await axios.put(
-        `${API_URL}/auth/UpdateProfile`,
-        { fullName, address },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
-      setUser(response.data.user);
-      Alert.alert("Thành công", "Cập nhật thông tin thành công!");
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể cập nhật thông tin. Vui lòng thử lại sau.");
-    }
-  };
-
-  const sendOtp = async (type) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/auth/send-change-${type}-otp`,
-        { [type]: type === "email" ? newEmail : newPhone },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
-      setShowOtpInput(true);
-      setOtpFor(type);
-      Alert.alert(
-        "Thành công",
-        `Mã OTP đã được gửi đến ${type === "email" ? newEmail : newPhone}`
-      );
-    } catch (error) {
-      Alert.alert("Lỗi", `Không thể gửi mã OTP. Vui lòng thử lại sau.`);
-    }
-  };
-
-  const verifyOtp = async () => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/auth/verify-change-${otpFor}`,
-        {
-          [otpFor]: otpFor === "email" ? newEmail : newPhone,
-          otp,
-        },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
-      if (otpFor === "email") {
-        setEmail(newEmail);
-      } else {
-        setPhone(newPhone);
+      if (!token) {
+        Alert.alert("Lỗi", "Bạn chưa đăng nhập!");
+        return;
       }
-      setShowOtpInput(false);
-      setOtp("");
-      Alert.alert(
-        "Thành công",
-        `${otpFor === "email" ? "Email" : "Số điện thoại"} đã được cập nhật!`
-      );
+
+      const updatedUser = await updateProfile(formData, token);
+      setUser(updatedUser);
+      Alert.alert("Thành công", "Cập nhật thành công!");
     } catch (error) {
-      Alert.alert("Lỗi", "Mã OTP không hợp lệ hoặc đã hết hạn.");
+      Alert.alert("Lỗi", "Lỗi cập nhật: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6A5AE0" />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
-        {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarPlaceholderText}>Chọn ảnh</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Họ và tên</Text>
-        <TextInput
-          style={styles.input}
-          value={fullName}
-          onChangeText={setFullName}
-          placeholder="Nhập họ và tên"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Địa chỉ</Text>
-        <TextInput
-          style={styles.input}
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Nhập địa chỉ"
-          multiline
-        />
-      </View>
-
-      <TouchableOpacity style={styles.button} onPress={updateProfile}>
-        <Text style={styles.buttonText}>Cập nhật thông tin</Text>
-      </TouchableOpacity>
-
-      <View style={styles.separator} />
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Email hiện tại</Text>
-        <Text style={styles.currentValue}>{email}</Text>
-        <TextInput
-          style={styles.input}
-          value={newEmail}
-          onChangeText={setNewEmail}
-          placeholder="Nhập email mới"
-          keyboardType="email-address"
-        />
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.button}
-          onPress={() => sendOtp("email")}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
         >
-          <Text style={styles.buttonText}>Gửi mã OTP</Text>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Thông tin cá nhân</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Số điện thoại hiện tại</Text>
-        <Text style={styles.currentValue}>{phone}</Text>
-        <TextInput
-          style={styles.input}
-          value={newPhone}
-          onChangeText={setNewPhone}
-          placeholder="Nhập số điện thoại mới"
-          keyboardType="phone-pad"
-        />
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => sendOtp("phone")}
-        >
-          <Text style={styles.buttonText}>Gửi mã OTP</Text>
-        </TouchableOpacity>
-      </View>
-
-      {showOtpInput && (
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Nhập mã OTP</Text>
-          <TextInput
-            style={styles.input}
-            value={otp}
-            onChangeText={setOtp}
-            placeholder="Nhập mã OTP"
-            keyboardType="number-pad"
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.avatarContainer}>
+          <Image
+            source={{
+              uri:
+                image?.uri || user.avatar || "https://via.placeholder.com/150",
+            }}
+            style={styles.avatar}
           />
-          <TouchableOpacity style={styles.button} onPress={verifyOtp}>
-            <Text style={styles.buttonText}>Xác nhận OTP</Text>
+          <TouchableOpacity
+            style={styles.changePhotoButton}
+            onPress={handleChoosePhoto}
+          >
+            <Text style={styles.changePhotoText}>Thay đổi</Text>
           </TouchableOpacity>
         </View>
-      )}
-    </ScrollView>
+
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Họ và tên</Text>
+            <TextInput
+              style={styles.input}
+              value={user.fullName}
+              editable={false}
+              placeholder="Họ và tên"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email"
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Số điện thoại</Text>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="Số điện thoại"
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Địa chỉ</Text>
+            <TextInput
+              style={styles.input}
+              value={user.address}
+              editable={false}
+              placeholder="Địa chỉ"
+            />
+          </View>
+
+          {image && (
+            <View style={styles.selectedImageContainer}>
+              <Text style={styles.selectedImageText}>
+                Ảnh đã chọn: {image.fileName}
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.updateButton}
+          onPress={handleUpdateProfile}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.updateButtonText}>Cập nhật thông tin</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FFFFFF",
   },
-  avatarContainer: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    backgroundColor: "#FFFFFF",
   },
-  avatar: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    height: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-  avatarPlaceholder: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: "#e1e1e1",
+  backButton: {
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarPlaceholderText: {
-    fontSize: 16,
-    color: "#666",
+  backButtonText: {
+    fontSize: 24,
+    color: "#333333",
   },
-  inputContainer: {
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333333",
+  },
+  headerRight: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  avatarContainer: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 32,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: "#6A5AE0",
+  },
+  changePhotoButton: {
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: "#F0F0F0",
+    borderRadius: 16,
+  },
+  changePhotoText: {
+    fontSize: 14,
+    color: "#6A5AE0",
+    fontWeight: "500",
+  },
+  formContainer: {
+    paddingHorizontal: 24,
+  },
+  inputGroup: {
     marginBottom: 20,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666666",
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 5,
-    fontSize: 16,
+    height: 50,
     borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  currentValue: {
+    borderColor: "#E0E0E0",
+    borderRadius: 8,
+    paddingHorizontal: 16,
     fontSize: 16,
-    color: "#666",
-    marginBottom: 10,
+    color: "#333333",
+    backgroundColor: "#FAFAFA",
   },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 5,
+  selectedImageContainer: {
+    backgroundColor: "#F0F8FF",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  selectedImageText: {
+    color: "#6A5AE0",
+    fontSize: 14,
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+  },
+  updateButton: {
+    backgroundColor: "#6A5AE0",
+    height: 54,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    shadowColor: "#6A5AE0",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  buttonText: {
-    color: "#fff",
+  updateButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 20,
+    fontWeight: "600",
   },
 });
 
-export default EditProfileScreen;
+export default UpdateProfile;

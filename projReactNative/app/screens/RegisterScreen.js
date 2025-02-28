@@ -33,13 +33,12 @@ export default function RegisterScreen() {
     }
 
     try {
-      // Gửi OTP trước khi đăng ký
       console.log("Email gửi OTP:", email);
-      await sendOTP(email);
+
+      const response = await sendOTP(email);
       console.log("OTP đã gửi tới:", email);
 
-      // Chuyển sang màn hình nhập OTP và truyền dữ liệu đăng ký
-      navigation.navigate("OtpVerify", {
+      navigation.navigate("otpVerify", {
         fullName,
         email,
         phone,
@@ -49,7 +48,10 @@ export default function RegisterScreen() {
       });
     } catch (error) {
       console.error("Lỗi gửi OTP:", error);
-      Alert.alert("Lỗi", "Không thể gửi OTP. Vui lòng thử lại.");
+      Alert.alert(
+        "Lỗi",
+        error?.message || "Không thể gửi OTP. Vui lòng thử lại."
+      );
     }
   };
 
