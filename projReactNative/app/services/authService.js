@@ -120,14 +120,16 @@ export const updateProfile = async (profileData) => {
 };
 
 // Cập nhật avatar
-export const updateAvatar = async (avatarFile) => {
+export const updateAvatar = async (userId, avatarFile) => {
   const formData = new FormData();
   formData.append("avatar", avatarFile);
 
   try {
-    const response = await axiosInstance.post("/auth/updateAvatar", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await axiosInstance.put(
+      `/auth/update-avatar/${userId}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : error.message;
