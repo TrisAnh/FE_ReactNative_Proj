@@ -1,4 +1,3 @@
-// screens/CategoryRooms.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -10,33 +9,37 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { getRoomsByCategory } from "../services/authService";
 
-const CategoryRooms = ({ route }) => {
+const CategoryRooms = ({ route, navigation }) => {
+  const { categoryName } = route.params;
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const { categoryId, categoryName } = route.params;
-
+  const PAGE_SIZE = 3;
+  // console.log("Dữ liệu truyền danh mục: ", categoryName);
   const fetchRooms = async () => {
     if (loading || !hasMore) return;
 
     try {
       setLoading(true);
-      // Thay thế URL API của bạn
-      const response = await fetch(
-        `https://your-api.com/api/rooms?category=${categoryId}&page=${page}&limit=10`
-      );
-      const data = await response.json();
+      const data = await getRoomsByCategory(categoryName, page, PAGE_SIZE);
 
       if (data.rooms.length === 0) {
         setHasMore(false);
       } else {
-        setRooms((prevRooms) => [...prevRooms, ...data.rooms]);
+        setRooms((prevRooms) => {
+          // Loại bỏ phòng trùng lặp
+          const newRooms = data.rooms.filter(
+            (room) => !prevRooms.some((prev) => prev._id === room._id)
+          );
+          return [...prevRooms, ...newRooms].sort((a, b) => a.price - b.price);
+        });
         setPage((prevPage) => prevPage + 1);
       }
     } catch (error) {
-      console.error("Error fetching rooms:", error);
+      console.error("❌ Lỗi khi tải danh sách phòng:", error.message);
     } finally {
       setLoading(false);
     }
@@ -44,11 +47,19 @@ const CategoryRooms = ({ route }) => {
 
   useEffect(() => {
     fetchRooms();
-  }, [categoryId]);
+  }, []);
 
   const renderRoom = ({ item }) => (
     <TouchableOpacity style={styles.roomCard}>
-      <Image source={{ uri: item.image }} style={styles.roomImage} />
+      <FlatList
+        data={item.images}
+        horizontal
+        pagingEnabled
+        keyExtractor={(img, index) => index.toString()}
+        renderItem={({ item }) => (
+          <Image source={{ uri: item }} style={styles.roomImage} />
+        )}
+      />
       <View style={styles.roomInfo}>
         <Text style={styles.roomName}>{item.name}</Text>
         <Text style={styles.roomAddress}>{item.address}</Text>
@@ -63,31 +74,59 @@ const CategoryRooms = ({ route }) => {
     </TouchableOpacity>
   );
 
-  const renderFooter = () => {
-    if (!loading) return null;
-    return (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#4A90E2" />
-      </View>
-    );
-  };
-
   return (
-    <FlatList
-      data={rooms}
-      renderItem={renderRoom}
-      keyExtractor={(item) => item.id}
-      onEndReached={fetchRooms}
-      onEndReachedThreshold={0.5}
-      ListFooterComponent={renderFooter}
-      contentContainerStyle={styles.container}
-    />
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Icon name="arrow-left" size={20} color="#4A90E2" />
+        <Text style={styles.backText}>Quay lại</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Danh sách phòng {categoryName}</Text>
+      <FlatList
+        data={rooms}
+        renderItem={renderRoom}
+        keyExtractor={(item, index) =>
+          item._id ? item._id.toString() : `room-${index}`
+        }
+        onEndReached={fetchRooms}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loading ? (
+            <ActivityIndicator size="small" color="#4A90E2" />
+          ) : !hasMore ? (
+            <Text style={styles.endMessage}>🚀 Đã hiển thị toàn bộ phòng</Text>
+          ) : null
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 10,
+    backgroundColor: "#F5F5F5",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  backText: {
+    fontSize: 16,
+    marginLeft: 8,
+    color: "#4A90E2",
+    fontWeight: "bold",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   roomCard: {
     backgroundColor: "#fff",
@@ -100,8 +139,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   roomImage: {
-    width: "100%",
-    height: 200,
+    width: 300,
+    height: 180,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
   },
@@ -133,9 +172,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  loadingFooter: {
-    paddingVertical: 20,
-    alignItems: "center",
+  endMessage: {
+    textAlign: "center",
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "bold",
   },
 });
 

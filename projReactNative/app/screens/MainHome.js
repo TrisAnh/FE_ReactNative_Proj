@@ -13,14 +13,19 @@ import {
   FlatList,
   Text,
   ActivityIndicator,
+  ImageBackground,
+  Slider,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
+
 import Icon from "react-native-vector-icons/FontAwesome";
 import RoomCategoryList from "../screens/RoomCategoryList.js";
 import TopRatedRooms from "../screens/TopRatedRooms.js";
+import CategoryRooms from "./CategoryRooms.js";
 import {
   getRoomCategories,
-  getTopViewedRooms,
-  searchRooms, // Thêm API search
+  getTopRatedRooms,
+  searchAndFilterRooms,
 } from "../services/authService.js";
 import { useNavigation } from "@react-navigation/native";
 
@@ -34,7 +39,23 @@ const MainHome = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const navigation = useNavigation();
+
+  // Thêm state cho các bộ lọc
+  const [roomType, setRoomType] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sortByPrice, setSortByPrice] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [roomTypes, setRoomTypes] = useState([
+    { label: "Tất cả", value: "" },
+    { label: "Phòng đơn", value: "Phòng đơn" },
+    { label: "Phòng đôi", value: "Phòng đôi" },
+    { label: "Căn hộ", value: "Căn hộ" },
+    { label: "Phòng ghép", value: "Phòng ghép" },
+  ]);
 
   useEffect(() => {
     fetchData();
@@ -44,7 +65,7 @@ const MainHome = () => {
     try {
       const [categoriesData, roomsData] = await Promise.all([
         getRoomCategories(),
-        getTopViewedRooms(),
+        getTopRatedRooms(),
       ]);
       setCategories(categoriesData);
       setTopRooms(roomsData);
@@ -59,7 +80,7 @@ const MainHome = () => {
     setRefreshing(false);
   };
 
-  // Xử lý tìm kiếm với debounce
+  // Xử lý tìm kiếm với debounce và các bộ lọc
   const handleSearch = (text) => {
     setSearchQuery(text);
 
@@ -69,37 +90,103 @@ const MainHome = () => {
     }
 
     // Đặt timeout mới
-    const newTimeout = setTimeout(async () => {
-      if (text.length >= 2) {
-        setIsSearching(true);
-        try {
-          const results = await searchRooms(text);
-          setSearchResults(results);
-        } catch (error) {
-          console.error("Error searching rooms:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
+    const newTimeout = setTimeout(() => {
+      performSearch(1); // Tìm kiếm từ trang 1
     }, 500); // Delay 500ms
 
     setSearchTimeout(newTimeout);
   };
 
-  // Render item kết quả tìm kiếm
+  // Hàm thực hiện tìm kiếm với tất cả các bộ lọc
+  const performSearch = async (page = currentPage) => {
+    if (
+      searchQuery.length >= 2 ||
+      roomType ||
+      minPrice ||
+      maxPrice ||
+      sortByPrice
+    ) {
+      setIsSearching(true);
+      try {
+        // Tạo đối tượng filters từ các state
+        const filters = {
+          keyword: searchQuery,
+          page: page,
+          limit: 10, // Số lượng kết quả mỗi trang
+        };
+
+        // Thêm các bộ lọc nếu có
+        if (roomType) filters.roomType = roomType;
+        if (minPrice) filters.minPrice = minPrice;
+        if (maxPrice) filters.maxPrice = maxPrice;
+        if (sortByPrice) filters.sortByPrice = sortByPrice;
+
+        // Gọi API tìm kiếm và lọc
+        const response = await searchAndFilterRooms(filters);
+
+        setSearchResults(response.rooms);
+        setTotalPages(response.totalPages);
+        setCurrentPage(response.currentPage);
+      } catch (error) {
+        console.error("Error searching rooms:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  // Xử lý khi thay đổi bộ lọc
+  const applyFilters = () => {
+    setCurrentPage(1); // Reset về trang 1
+    performSearch(1);
+    setShowFilters(false);
+  };
+
+  // Xử lý phân trang
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      performSearch(nextPage);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      performSearch(prevPage);
+    }
+  };
+
+  // Reset bộ lọc
+  const resetFilters = () => {
+    setRoomType("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSortByPrice("");
+    setCurrentPage(1);
+  };
+
   const renderSearchResult = ({ item }) => (
     <TouchableOpacity
       style={styles.searchResultItem}
       onPress={() => {
+        console.log("Room ID được chọn:", item._id); // 👈 log ID
         setSearchVisible(false);
-        navigation.navigate("RoomDetail", { roomId: item.id });
+        navigation.navigate("RoomDetail", { roomId: item._id });
       }}
     >
       <View style={styles.searchResultContent}>
         <Image
-          source={{ uri: item.image || "https://example.com/placeholder.jpg" }}
+          source={{
+            uri:
+              item.images && item.images.length > 0
+                ? item.images[0]
+                : "https://example.com/placeholder.jpg",
+          }}
           style={styles.searchResultImage}
         />
         <View style={styles.searchResultInfo}>
@@ -109,9 +196,18 @@ const MainHome = () => {
           <Text style={styles.searchResultAddress} numberOfLines={1}>
             {item.address}
           </Text>
-          <Text style={styles.searchResultPrice}>
-            {item.price.toLocaleString("vi-VN")} đ/tháng
-          </Text>
+          <View style={styles.priceAndRating}>
+            <Text style={styles.searchResultPrice}>
+              {item.price.toLocaleString("vi-VN")} đ/tháng
+            </Text>
+            {item.rating && (
+              <View style={styles.ratingContainer}>
+                <Icon name="star" size={14} color="#FFD700" />
+                <Text style={styles.ratingText}>{item.rating}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.roomTypeText}>{item.roomType}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -183,7 +279,13 @@ const MainHome = () => {
             )}
           </View>
         </View>
-        <View style={styles.slideshow}></View>
+        <View style={styles.slideshowContainer}>
+          <Image
+            source={require("../assets/background.png")}
+            style={styles.slideshow}
+            resizeMode="cover"
+          ></Image>
+        </View>
         <RoomCategoryList categories={categories} />
         <TopRatedRooms rooms={topRooms} />
       </ScrollView>
@@ -209,26 +311,181 @@ const MainHome = () => {
               onChangeText={handleSearch}
               autoFocus
             />
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <Icon name="filter" size={20} color="#4A90E2" />
+            </TouchableOpacity>
           </View>
+
+          {/* Phần bộ lọc */}
+          {showFilters && (
+            <View style={styles.filtersContainer}>
+              <Text style={styles.filterTitle}>Bộ lọc tìm kiếm</Text>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Loại phòng:</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={roomType}
+                    style={styles.picker}
+                    onValueChange={(itemValue) => setRoomType(itemValue)}
+                  >
+                    {roomTypes.map((type, index) => (
+                      <Picker.Item
+                        key={index}
+                        label={type.label}
+                        value={type.value}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Khoảng giá:</Text>
+                <View style={styles.priceInputContainer}>
+                  <TextInput
+                    style={styles.priceInput}
+                    placeholder="Giá tối thiểu"
+                    value={minPrice}
+                    onChangeText={setMinPrice}
+                    keyboardType="numeric"
+                  />
+                  <Text style={styles.priceSeparator}>-</Text>
+                  <TextInput
+                    style={styles.priceInput}
+                    placeholder="Giá tối đa"
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Sắp xếp theo giá:</Text>
+                <View style={styles.sortButtonsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.sortButton,
+                      sortByPrice === "asc" && styles.sortButtonActive,
+                    ]}
+                    onPress={() => setSortByPrice("asc")}
+                  >
+                    <Text
+                      style={
+                        sortByPrice === "asc"
+                          ? styles.sortButtonTextActive
+                          : styles.sortButtonText
+                      }
+                    >
+                      Tăng dần
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.sortButton,
+                      sortByPrice === "desc" && styles.sortButtonActive,
+                    ]}
+                    onPress={() => setSortByPrice("desc")}
+                  >
+                    <Text
+                      style={
+                        sortByPrice === "desc"
+                          ? styles.sortButtonTextActive
+                          : styles.sortButtonText
+                      }
+                    >
+                      Giảm dần
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.filterActions}>
+                <TouchableOpacity
+                  style={styles.resetButton}
+                  onPress={resetFilters}
+                >
+                  <Text style={styles.resetButtonText}>Đặt lại</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.applyButton}
+                  onPress={applyFilters}
+                >
+                  <Text style={styles.applyButtonText}>Áp dụng</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {isSearching ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4A90E2" />
             </View>
           ) : (
-            <FlatList
-              data={searchResults}
-              renderItem={renderSearchResult}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.searchResults}
-              ListEmptyComponent={
-                searchQuery.length >= 2 ? (
-                  <Text style={styles.noResults}>
-                    Không tìm thấy kết quả phù hợp
+            <>
+              <FlatList
+                data={searchResults}
+                renderItem={renderSearchResult}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={styles.searchResults}
+                ListEmptyComponent={
+                  searchQuery.length >= 2 ||
+                  roomType ||
+                  minPrice ||
+                  maxPrice ? (
+                    <Text style={styles.noResults}>
+                      Không tìm thấy kết quả phù hợp
+                    </Text>
+                  ) : (
+                    <Text style={styles.searchPrompt}>
+                      Nhập từ khóa hoặc chọn bộ lọc để tìm kiếm
+                    </Text>
+                  )
+                }
+              />
+
+              {/* Phân trang */}
+              {searchResults.length > 0 && (
+                <View style={styles.paginationContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.paginationButton,
+                      currentPage === 1 && styles.paginationButtonDisabled,
+                    ]}
+                    onPress={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    <Icon
+                      name="chevron-left"
+                      size={16}
+                      color={currentPage === 1 ? "#ccc" : "#4A90E2"}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.paginationText}>
+                    Trang {currentPage} / {totalPages}
                   </Text>
-                ) : null
-              }
-            />
+                  <TouchableOpacity
+                    style={[
+                      styles.paginationButton,
+                      currentPage === totalPages &&
+                        styles.paginationButtonDisabled,
+                    ]}
+                    onPress={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    <Icon
+                      name="chevron-right"
+                      size={16}
+                      color={currentPage === totalPages ? "#ccc" : "#4A90E2"}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
         </View>
       </Modal>
@@ -259,7 +516,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: "relative",
-    zIndex: 1000, // Ensure this is higher than other elements
+    zIndex: 1000,
   },
   avatar: {
     width: 32,
@@ -267,20 +524,22 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginLeft: 10,
   },
-  slideshow: {
+  slideshowContainer: {
     height: 200,
-    backgroundColor: "#4A90E2",
+    overflow: "hidden",
+    borderRadius: 10,
     marginVertical: 10,
-    zIndex: 1, // Ensure this is lower than the avatar and menu
   },
-  // Styles cho modal search
+  slideshow: {
+    width: "100%",
+    height: "120%",
+  },
   searchModal: {
     flex: 1,
     backgroundColor: "#fff",
-    zIndex: 2000, // Đặt giá trị cao hơn slideshow
-    elevation: 10, // Dành cho Android
+    zIndex: 2000,
+    elevation: 10,
   },
-
   searchHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -298,6 +557,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: "#f5f5f5",
     borderRadius: 20,
+  },
+  filterButton: {
+    padding: 10,
+    marginLeft: 5,
   },
   searchResults: {
     padding: 10,
@@ -337,10 +600,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
+  priceAndRating: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   searchResultPrice: {
     fontSize: 14,
     fontWeight: "500",
     color: "#E53935",
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratingText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: "#666",
+  },
+  roomTypeText: {
+    fontSize: 12,
+    color: "#4A90E2",
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -353,14 +635,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  avatarContainer: {
-    position: "relative",
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginLeft: 10,
+  searchPrompt: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#666",
   },
   userMenu: {
     position: "absolute",
@@ -378,7 +657,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 1000, // Ensure this is higher than other elements
+    zIndex: 1000,
   },
   menuItem: {
     flexDirection: "row",
@@ -393,6 +672,135 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#eee",
     marginVertical: 4,
+  },
+  // Styles cho bộ lọc
+  filtersContainer: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  filterSection: {
+    marginBottom: 15,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#333",
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  picker: {
+    height: 45,
+    width: "100%",
+  },
+  priceInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  priceInput: {
+    flex: 1,
+    height: 45,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  priceSeparator: {
+    marginHorizontal: 10,
+    color: "#666",
+  },
+  sortButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sortButton: {
+    flex: 1,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginHorizontal: 5,
+  },
+  sortButtonActive: {
+    backgroundColor: "#4A90E2",
+    borderColor: "#4A90E2",
+  },
+  sortButtonText: {
+    color: "#666",
+  },
+  sortButtonTextActive: {
+    color: "#fff",
+  },
+  filterActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  resetButton: {
+    flex: 1,
+    height: 45,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginRight: 5,
+  },
+  resetButtonText: {
+    color: "#666",
+  },
+  applyButton: {
+    flex: 1,
+    height: 45,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#4A90E2",
+    borderRadius: 8,
+    marginLeft: 5,
+  },
+  applyButtonText: {
+    color: "#fff",
+    fontWeight: "500",
+  },
+  // Styles cho phân trang
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  paginationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 20,
+  },
+  paginationButtonDisabled: {
+    borderColor: "#eee",
+    backgroundColor: "#f9f9f9",
+  },
+  paginationText: {
+    marginHorizontal: 15,
+    fontSize: 14,
+    color: "#666",
   },
 });
 

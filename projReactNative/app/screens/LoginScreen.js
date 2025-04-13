@@ -48,7 +48,7 @@ export default function LoginScreen() {
         // const profile = await fetchProfile(response.token); // Ví dụ hàm lấy profile
         // navigation.navigate("profile", { profile });
 
-        navigation.navigate("mainHome");
+        navigation.navigate("Main");
       } else {
         // Xử lý trường hợp phản hồi không mong đợi
         console.log("Đăng nhập thất bại, phản hồi không mong đợi:", response);

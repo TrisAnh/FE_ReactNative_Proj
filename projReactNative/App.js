@@ -12,6 +12,11 @@ import MainHome from "./app/screens/MainHome";
 import OTPVerificationForgotScreen from "./app/screens/OTPVerifyForgot";
 import CategoryRooms from "./app/screens/CategoryRooms";
 import UpdateProfile from "./app/screens/UpdateProfile";
+import BottomTabNavigator from "./app/screens/BottomTabNavigator";
+import RoomDetailScreen from "./app/screens/RoomDetail";
+import BookViewingScreen from "./app/screens/BookingViewing";
+import ViewingsListScreen from "./app/screens/viewings-list-screen";
+import ViewingDetailsScreen from "./app/screens/viewing-details-screen";
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -35,6 +40,15 @@ export default function App() {
         />
         <Stack.Screen name="mainHome" component={MainHome} />
         <Stack.Screen name="profile" component={UpdateProfile} />
+        <Stack.Screen name="CategoryRooms" component={CategoryRooms} />
+        <Stack.Screen name="Main" component={BottomTabNavigator} />
+        <Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
+        <Stack.Screen name="BookViewingScreen" component={BookViewingScreen} />
+        <Stack.Screen
+          name="ViewingsListScreen"
+          component={ViewingsListScreen}
+        />
+        <Stack.Screen name="ViewingDetails" component={ViewingDetailsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

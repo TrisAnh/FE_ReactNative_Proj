@@ -135,34 +135,80 @@ export const updateAvatar = async (userId, avatarFile) => {
     throw error.response ? error.response.data : error.message;
   }
 };
-export const getRoomsByCategory = async (categoryId, page = 1, limit = 10) => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/rooms?categoryId=${categoryId}&page=${page}&limit=${limit}`
-    );
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error fetching rooms by category:", error);
-    throw error;
-  }
-};
 export const getRoomCategories = async () => {
   try {
-    const response = await axiosInstance.get("/auth/getAllRoomCategories");
+    const response = await axiosInstance.get("/auth/room-categories");
     return response.data;
   } catch (error) {
-    console.error("Error fetching room categories:", error);
+    console.error("❌ Lỗi khi lấy danh mục phòng:", error);
     throw error;
   }
 };
 
-export const getTopViewedRooms = async () => {
+// 2️⃣ Lấy 10 phòng có rating cao nhất
+export const getTopRatedRooms = async () => {
   try {
     const response = await axiosInstance.get("/auth/getTopRatedRooms");
     return response.data;
   } catch (error) {
-    console.error("Error fetching top viewed rooms:", error);
+    console.error("❌ Lỗi khi lấy phòng có rating cao nhất:", error);
+    throw error;
+  }
+};
+
+export const getRoomsByCategory = async (category) => {
+  try {
+    const response = await axiosInstance.get(`/auth/category/${category}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi tải danh sách phòng:", error);
+    throw error;
+  }
+};
+export const searchAndFilterRooms = async (filters) => {
+  try {
+    const response = await axiosInstance.get("/auth/search", {
+      params: filters,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi tìm kiếm & lọc phòng:", error);
+    throw error;
+  }
+};
+export const getRoomsDetail = async (roomId) => {
+  try {
+    const response = await axiosInstance.get(`/auth/detail/${roomId}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi tải danh sách phòng:", error);
+    throw error;
+  }
+};
+export const bookViewing = async (formData) => {
+  try {
+    const response = await axiosInstance.post("/auth/viewings", formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi đặt lịch xem phòng:", error);
+    throw error;
+  }
+};
+export const getAllViewings = async () => {
+  try {
+    const response = await axiosInstance.get("/auth/getAllViewings");
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi đặt lịch xem phòng:", error);
+    throw error;
+  }
+};
+export const getViewingById = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/auth/getViewing/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi đặt lịch xem phòng:", error);
     throw error;
   }
 };

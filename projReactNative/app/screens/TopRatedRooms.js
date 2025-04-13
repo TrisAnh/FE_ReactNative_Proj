@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -5,69 +6,79 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-
-const dummyRooms = [
-  {
-    id: "1",
-    name: "Phòng đơn cao cấp",
-    address: "123 Đường ABC, Quận 1, TP.HCM",
-    price: 3000000,
-    rating: 4.8,
-    image: "https://example.com/room1.jpg",
-  },
-  {
-    id: "2",
-    name: "Căn hộ view đẹp",
-    address: "456 Đường XYZ, Quận 2, TP.HCM",
-    price: 5000000,
-    rating: 4.7,
-    image: "https://example.com/room2.jpg",
-  },
-  {
-    id: "3",
-    name: "Phòng đôi tiện nghi",
-    address: "789 Đường LMN, Quận 3, TP.HCM",
-    price: 3500000,
-    rating: 4.6,
-    image: "https://example.com/room3.jpg",
-  },
-  // Thêm các phòng khác ở đây
-];
+import { getTopRatedRooms } from "../services/authService";
+import { useNavigation } from "@react-navigation/native"; // 👉 thêm dòng này
 
 const TopRatedRooms = () => {
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.roomItem}>
-      <Image source={{ uri: item.image }} style={styles.roomImage} />
-      <View style={styles.roomInfo}>
-        <Text style={styles.roomName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.roomAddress} numberOfLines={1}>
-          {item.address}
-        </Text>
-        <Text style={styles.roomPrice}>
-          {item.price.toLocaleString("vi-VN")} đ/tháng
-        </Text>
-        <View style={styles.ratingContainer}>
-          <Icon name="star" size={16} color="#FFD700" />
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation(); // 👉 khởi tạo navigation
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const data = await getTopRatedRooms();
+        setRooms(data);
+      } catch (error) {
+        console.error("❌ Lỗi khi lấy danh sách phòng:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, []);
+
+  const renderItem = ({ item }) => {
+    return (
+      <TouchableOpacity
+        style={styles.roomItem}
+        onPress={() => {
+          console.log("📦 Room ID được chọn:", item._id); // kiểm tra ID
+          navigation.navigate("RoomDetail", { roomId: item._id });
+        }}
+      >
+        <Image
+          source={{ uri: item.images[0] }}
+          style={styles.roomImage}
+          onError={(e) => console.log("⚠️ Lỗi tải ảnh:", e.nativeEvent.error)}
+        />
+        <View style={styles.roomInfo}>
+          <Text style={styles.roomName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.roomAddress} numberOfLines={1}>
+            {item.address}
+          </Text>
+          <Text style={styles.roomPrice}>
+            {item.price.toLocaleString("vi-VN")} đ/tháng
+          </Text>
+          <View style={styles.ratingContainer}>
+            <Icon name="star" size={16} color="#FFD700" />
+            <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Phòng được đánh giá cao nhất</Text>
-      <FlatList
-        data={dummyRooms}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#E53935" />
+      ) : (
+        <FlatList
+          data={rooms}
+          renderItem={renderItem}
+          keyExtractor={(item) => item._id.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 };

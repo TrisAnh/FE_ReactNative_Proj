@@ -1,45 +1,72 @@
-// screens/RoomCategoryList.js
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { getRoomCategories } from "../services/authService";
 
-const categories = [
-  { id: "1", name: "Phòng đơn" },
-  { id: "2", name: "Phòng đôi" },
-  { id: "3", name: "Căn hộ" },
-  { id: "4", name: "Chung cư" },
-  { id: "5", name: "Phòng ghép" },
-];
-
-const RoomCategoryList = ({ selectedCategory, onSelectCategory }) => {
+const RoomCategoryList = ({ selectedCategory }) => {
   const navigation = useNavigation();
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Trong hàm handleCategoryPress của RoomCategoryList.js
-  const handleCategoryPress = (category) => {
-    navigation.navigate("CategoryRooms", {
-      categoryId: category.id,
-      categoryName: category.name,
-    });
+  // Hàm lấy danh sách danh mục từ API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getRoomCategories();
+        console.log("📌 Dữ liệu danh mục:", data); // Kiểm tra dữ liệu trả về
+        setCategories(data);
+      } catch (err) {
+        setError("Lỗi khi lấy danh mục phòng!");
+        console.error("❌ Lỗi khi lấy danh mục phòng:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Làm mới danh sách khi người dùng kéo xuống
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchCategories();
+    setRefreshing(false);
   };
+
+  // Dùng useCallback để tối ưu
+  const handleCategoryPress = useCallback(
+    (category) => {
+      console.log("📌 Chọn danh mục:", category);
+      navigation.navigate("CategoryRooms", {
+        categoryId: category._id,
+        categoryName: category.name,
+      });
+    },
+    [navigation]
+  );
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={[
         styles.categoryItem,
-        selectedCategory?.id === item.id && styles.selectedCategory,
+        selectedCategory?._id === item._id && styles.selectedCategory,
       ]}
       onPress={() => handleCategoryPress(item)}
     >
       <Text
         style={[
           styles.categoryText,
-          selectedCategory?.id === item.id && styles.selectedCategoryText,
+          selectedCategory?._id === item._id && styles.selectedCategoryText,
         ]}
       >
         {item.name}
@@ -47,16 +74,44 @@ const RoomCategoryList = ({ selectedCategory, onSelectCategory }) => {
     </TouchableOpacity>
   );
 
+  if (loading) return <ActivityIndicator size="large" color="#4A90E2" />;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Loại phòng</Text>
       <FlatList
-        data={categories}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        data={categories.map((item, index) =>
+          typeof item === "string"
+            ? { _id: index.toString(), name: item }
+            : item
+        )} // Đảm bảo mỗi item có _id và name
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.categoryItem,
+              selectedCategory?._id === item._id && styles.selectedCategory,
+            ]}
+            onPress={() => handleCategoryPress(item)}
+          >
+            <Text
+              style={[
+                styles.categoryText,
+                selectedCategory?._id === item._id &&
+                  styles.selectedCategoryText,
+              ]}
+            >
+              {item.name}
+            </Text>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item, index) => item._id || index.toString()} // Đảm bảo key luôn hợp lệ
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );
@@ -96,6 +151,11 @@ const styles = StyleSheet.create({
   selectedCategoryText: {
     color: "#fff",
     fontWeight: "600",
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    marginTop: 10,
   },
 });
 
