@@ -17,40 +17,53 @@ import RoomDetailScreen from "./app/screens/RoomDetail";
 import BookViewingScreen from "./app/screens/BookingViewing";
 import ViewingsListScreen from "./app/screens/viewings-list-screen";
 import ViewingDetailsScreen from "./app/screens/viewing-details-screen";
+import CreateRoomScreen from "./app/screens/CreateRoom";
+import { AuthProvider } from "./app/context/authContext";
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Home"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="forgotPassWord" component={ForgotPasswordScreen} />
-        <Stack.Screen name="newPassWord" component={NewPasswordScreen} />
-        <Stack.Screen name="otpVerify" component={OTPVerificationScreen} />
-        <Stack.Screen
-          name="otpVerifyForgot"
-          component={OTPVerificationForgotScreen}
-        />
-        <Stack.Screen name="mainHome" component={MainHome} />
-        <Stack.Screen name="profile" component={UpdateProfile} />
-        <Stack.Screen name="CategoryRooms" component={CategoryRooms} />
-        <Stack.Screen name="Main" component={BottomTabNavigator} />
-        <Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
-        <Stack.Screen name="BookViewingScreen" component={BookViewingScreen} />
-        <Stack.Screen
-          name="ViewingsListScreen"
-          component={ViewingsListScreen}
-        />
-        <Stack.Screen name="ViewingDetails" component={ViewingDetailsScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen
+            name="forgotPassWord"
+            component={ForgotPasswordScreen}
+          />
+          <Stack.Screen name="newPassWord" component={NewPasswordScreen} />
+          <Stack.Screen name="otpVerify" component={OTPVerificationScreen} />
+          <Stack.Screen
+            name="otpVerifyForgot"
+            component={OTPVerificationForgotScreen}
+          />
+          <Stack.Screen name="mainHome" component={MainHome} />
+          <Stack.Screen name="profile" component={UpdateProfile} />
+          <Stack.Screen name="CategoryRooms" component={CategoryRooms} />
+          <Stack.Screen name="Main" component={BottomTabNavigator} />
+          <Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
+          <Stack.Screen
+            name="BookViewingScreen"
+            component={BookViewingScreen}
+          />
+          <Stack.Screen
+            name="ViewingsListScreen"
+            component={ViewingsListScreen}
+          />
+          <Stack.Screen
+            name="ViewingDetails"
+            component={ViewingDetailsScreen}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 //<Stack.Screen name="profile" component={EditProfileScreen} />

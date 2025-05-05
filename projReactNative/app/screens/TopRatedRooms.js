@@ -58,7 +58,11 @@ const TopRatedRooms = () => {
           </Text>
           <View style={styles.ratingContainer}>
             <Icon name="star" size={16} color="#FFD700" />
-            <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+            <Text style={styles.ratingText}>
+              {typeof item.rating === "number"
+                ? item.rating.toFixed(1)
+                : "Chưa có đánh giá"}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>

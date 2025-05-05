@@ -4,6 +4,7 @@ import FavoriteScreen from "../screens/FavoriteScreen.js";
 import MainHome from "./MainHome.js";
 import ViewingsListScreen from "./viewings-list-screen.js";
 import Icon from "react-native-vector-icons/FontAwesome";
+import PostManagerTab from "./PostManagerTab"; // import mới
 
 const Tab = createBottomTabNavigator();
 
@@ -20,20 +21,29 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Quản lý đặt lịch"
-        component={ViewingsListScreen}
+        name="Quản lý bài đăng"
+        component={PostManagerTab}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="heart" size={size} color={color} />
+            <Icon name="pencil" size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="Hồ sơ"
-        component={UpdateProfile}
+        name="Quản lý đặt lịch"
+        component={ViewingsListScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="user" size={size} color={color} />
+            <Icon name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Yêu thích"
+        component={FavoriteScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="heart" size={size} color={color} />
           ),
         }}
       />

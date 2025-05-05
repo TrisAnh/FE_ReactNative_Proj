@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import {
   View,
@@ -15,13 +13,12 @@ import {
   SafeAreaView,
   Modal,
 } from "react-native";
-// Removed DateTimePicker import
 import { Ionicons } from "@expo/vector-icons";
 import { bookViewing } from "../services/authService";
 
 const BookViewingScreen = ({ route, navigation }) => {
   const { roomId, roomName } = route.params;
-  // console.log("Roomid được truyền vào booking", roomId);
+
   const [formData, setFormData] = useState({
     roomId: roomId,
     customerName: "",
@@ -32,7 +29,6 @@ const BookViewingScreen = ({ route, navigation }) => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Xử lý thay đổi input
@@ -206,9 +202,20 @@ const BookViewingScreen = ({ route, navigation }) => {
 
     try {
       setLoading(true);
-      await bookViewing(formData);
+
+      // Chuẩn bị dữ liệu để gửi đi
+      const bookingData = {
+        roomId: formData.roomId,
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone,
+        viewDate: formData.viewDate.toISOString(), // Chuyển đổi ngày thành chuỗi ISO
+      };
+
+      // Gọi API đặt lịch
+      await bookViewing(bookingData);
+
       setLoading(false);
-      setSuccess(true);
 
       // Hiển thị thông báo thành công
       Alert.alert(
@@ -218,10 +225,30 @@ const BookViewingScreen = ({ route, navigation }) => {
       );
     } catch (error) {
       setLoading(false);
-      Alert.alert(
-        "Đặt lịch thất bại",
-        "Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại sau."
-      );
+
+      // Xử lý các lỗi từ API
+      let errorMessage = "Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại sau.";
+
+      if (error.response) {
+        // Lấy thông báo lỗi từ API nếu có
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        // Xử lý các mã lỗi cụ thể
+        if (error.response.status === 400) {
+          // Lỗi dữ liệu không hợp lệ
+          if (error.response.data.message.includes("đã có người đặt lịch")) {
+            errorMessage =
+              "Phòng đã có người đặt lịch xem vào thời gian này. Vui lòng chọn ngày khác.";
+          }
+        } else if (error.response.status === 404) {
+          // Phòng không tồn tại
+          errorMessage = "Phòng không tồn tại hoặc đã bị xóa.";
+        }
+      }
+
+      Alert.alert("Đặt lịch thất bại", errorMessage);
       console.error("❌ Lỗi khi đặt lịch:", error);
     }
   };
@@ -361,6 +388,10 @@ const BookViewingScreen = ({ route, navigation }) => {
                   />{" "}
                   Lịch xem phòng sẽ được xác nhận qua điện thoại hoặc email.
                 </Text>
+                <Text style={styles.noteText}>
+                  <Ionicons name="time-outline" size={16} color="#666" /> Chủ
+                  phòng sẽ duyệt yêu cầu xem phòng của bạn.
+                </Text>
               </View>
             </View>
           </View>
@@ -490,6 +521,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     lineHeight: 20,
+    marginBottom: 8,
   },
   footer: {
     padding: 16,

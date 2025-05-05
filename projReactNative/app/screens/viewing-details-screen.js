@@ -18,7 +18,6 @@ const ViewingDetailsScreen = ({ route, navigation }) => {
   const { id } = route.params;
   const [viewing, setViewing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
   console.log("id của đặt lịch được gọi", id);
   // Fetch viewing details
   const fetchViewingDetails = async () => {
@@ -83,38 +82,6 @@ const ViewingDetailsScreen = ({ route, navigation }) => {
       default:
         return "Không xác định";
     }
-  };
-
-  // Handle status update
-  const handleUpdateStatus = async (newStatus) => {
-    try {
-      setUpdating(true);
-      await updateViewingStatus(id, newStatus);
-      // Update local state
-      setViewing({ ...viewing, status: newStatus });
-      setUpdating(false);
-      Alert.alert("Thành công", "Cập nhật trạng thái thành công");
-    } catch (error) {
-      setUpdating(false);
-      Alert.alert(
-        "Lỗi",
-        "Không thể cập nhật trạng thái. Vui lòng thử lại sau."
-      );
-      console.error("❌ Lỗi khi cập nhật trạng thái:", error);
-    }
-  };
-
-  // Confirm status update
-  const confirmStatusUpdate = (newStatus) => {
-    const statusText = getStatusText(newStatus);
-    Alert.alert(
-      "Xác nhận thay đổi",
-      `Bạn có chắc chắn muốn thay đổi trạng thái thành "${statusText}"?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        { text: "Xác nhận", onPress: () => handleUpdateStatus(newStatus) },
-      ]
-    );
   };
 
   if (loading) {
@@ -205,50 +172,7 @@ const ViewingDetailsScreen = ({ route, navigation }) => {
               </Text>
             </View>
           </View>
-
-          {viewing.status === "pending" && (
-            <View style={styles.statusActions}>
-              <TouchableOpacity
-                style={[styles.statusButton, styles.confirmButton]}
-                onPress={() => confirmStatusUpdate("confirmed")}
-                disabled={updating}
-              >
-                {updating ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="checkmark-circle-outline"
-                      size={18}
-                      color="#fff"
-                      style={styles.buttonIcon}
-                    />
-                    <Text style={styles.confirmButtonText}>Xác nhận</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.statusButton, styles.cancelButton]}
-                onPress={() => confirmStatusUpdate("cancelled")}
-                disabled={updating}
-              >
-                {updating ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="close-circle-outline"
-                      size={18}
-                      color="#fff"
-                      style={styles.buttonIcon}
-                    />
-                    <Text style={styles.cancelButtonText}>Hủy lịch</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Removed the status action buttons */}
         </View>
 
         {/* Customer Info */}
@@ -443,7 +367,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
   },
   statusLabel: {
     fontSize: 16,
@@ -465,36 +388,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    fontWeight: "500",
-  },
-  statusActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statusButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  confirmButton: {
-    backgroundColor: "#10b981",
-  },
-  cancelButton: {
-    backgroundColor: "#ef4444",
-  },
-  buttonIcon: {
-    marginRight: 6,
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontWeight: "500",
-  },
-  cancelButtonText: {
-    color: "#fff",
     fontWeight: "500",
   },
   infoCard: {

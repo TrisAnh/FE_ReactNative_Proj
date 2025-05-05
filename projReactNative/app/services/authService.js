@@ -106,6 +106,31 @@ export const getProfile = async (token) => {
     );
   }
 };
+// export const getUserProfile = async (token) => {
+//   try {
+//     if (!token) throw new Error("Bạn chưa đăng nhập!");
+
+//     const response = await axiosInstance.get("/auth/me", {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
+//     return response.data;
+//   } catch (error) {
+//     throw new Error(
+//       error.response?.data?.message || "Không thể tải thông tin người dùng"
+//     );
+//   }
+// };
+export const getUserById = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/auth/getUserById/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi đặt lịch xem phòng:", error);
+    throw error;
+  }
+};
 // Cập nhật thông tin người dùng
 export const updateProfile = async (profileData) => {
   try {
@@ -165,6 +190,40 @@ export const getRoomsByCategory = async (category) => {
     throw error;
   }
 };
+export const getRoomsByOwner = async (ownerId) => {
+  try {
+    const response = await axiosInstance.get(
+      `/auth/getRoomsByOwner/${ownerId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi tải danh sách phòng theo chủ trọ:", error);
+    throw error;
+  }
+};
+export const updateRoomCategory = async (roomId, roomData) => {
+  try {
+    const response = await axiosInstance.put(
+      `/auth/updateRoomCategory/${roomId}`,
+      roomData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi chỉnh sửa:", error);
+    throw error;
+  }
+};
+export const deleteRoomCategory = async (roomId) => {
+  try {
+    const response = await axiosInstance.delete(
+      `/auth/deleteRoomCategory/${roomId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi chỉnh sửa:", error);
+    throw error;
+  }
+};
 export const searchAndFilterRooms = async (filters) => {
   try {
     const response = await axiosInstance.get("/auth/search", {
@@ -203,6 +262,24 @@ export const getAllViewings = async () => {
     throw error;
   }
 };
+export const getSentViewings = async () => {
+  try {
+    const response = await axiosInstance.get("/auth/getSentViewings");
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy danh sách gửi yêu cầu", error);
+    throw error;
+  }
+};
+export const getPendingViewings = async () => {
+  try {
+    const response = await axiosInstance.get("/auth/getPendingViewings");
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy danh sách duyệt", error);
+    throw error;
+  }
+};
 export const getViewingById = async (id) => {
   try {
     const response = await axiosInstance.get(`/auth/getViewing/${id}`);
@@ -210,5 +287,113 @@ export const getViewingById = async (id) => {
   } catch (error) {
     console.error("❌ Lỗi khi đặt lịch xem phòng:", error);
     throw error;
+  }
+};
+export const updateViewingStatus = async (id, status) => {
+  try {
+    // Truyền `status` vào body của request
+    const response = await axiosInstance.put(`/auth/approveViewing/${id}`, {
+      status,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi duyệt đặt lịch:", error);
+    throw error;
+  }
+};
+
+export const createRoomCategory = async (formData) => {
+  try {
+    const response = await axiosInstance.post("/auth/createRoom", formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo phòng:", error);
+    throw error;
+  }
+};
+export const getRoomComments = async (roomId) => {
+  try {
+    const response = await axiosInstance.get(`/auth/getComment/${roomId}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy comment:", error);
+    throw error;
+  }
+};
+export const createComment = async (formData) => {
+  try {
+    const response = await axiosInstance.post("/auth/createComment", formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi gửi bình luận:", error);
+    throw error;
+  }
+};
+export const updateComment = async (commentId, commentData) => {
+  try {
+    console.log("Updating comment ID:", commentId);
+    console.log("Updating comment with data:", commentData);
+
+    const response = await axiosInstance.put(
+      `/auth/updateComment/${commentId}`,
+      commentData
+    );
+
+    console.log("Update comment response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi cập nhật bình luận:", error);
+    throw error;
+  }
+};
+export const deleteComment = async (commmentId) => {
+  try {
+    const response = await axiosInstance.delete(
+      `/auth/deleteComment/${commmentId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi xoá comment", error);
+    throw error;
+  }
+};
+export const createFavorite = async (formData) => {
+  try {
+    const response = await axiosInstance.post("/auth/createFavorite", formData);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi yêu thích:", error);
+    throw error;
+  }
+};
+export const getFavoriteByUser = async (UserId) => {
+  try {
+    const response = await axiosInstance.get(`/auth/getFavorite/${UserId}`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy yêu thích:", error);
+    throw error;
+  }
+};
+export const checkFavorite = async (userId, roomId) => {
+  try {
+    const response = await axiosInstance.get(
+      `/auth/checkFavorite?userId=${userId}&roomId=${roomId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi kiểm tra yêu thích:", error);
+    return { isFavorite: false };
+  }
+};
+export const removeFavorite = async (userId, roomId) => {
+  try {
+    const response = await axiosInstance.delete("/auth/removeFavorite", {
+      data: { userId, roomId },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("❌ Lỗi khi xoá yêu thích:", error);
+    return { status: "error" };
   }
 };
